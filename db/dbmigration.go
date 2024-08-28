@@ -12,6 +12,17 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Migrate migrates the database using the provided SQL connection.
+// It performs the following steps:
+// 1. Generates a unique session ID.
+// 2. Logs the start of the migration process.
+// 3. Sets up the database driver using the provided SQL connection.
+// 4. Creates a new migration instance with the specified migration files directory and database driver.
+// 5. Executes the "up" migration.
+// 6. Logs the result of the migration process.
+//
+// If an error occurs during any of the steps, the function logs the error and terminates the migration process.
+// The function returns no values.
 func Migrate(conn *sql.DB) {
 	sidString := sid.Id()
 	logStart := util.LogRequest("", "Migrate-"+sidString, "dbmigration - Migrate")
@@ -41,8 +52,8 @@ func Migrate(conn *sql.DB) {
 			logErr := util.LogError(err.Error(), "Migrate-"+sidString, "dbmigration - Migrate - m.Up()")
 			log.Fatal().Msg(logErr)
 		}
+	} else {
+		logStop := util.LogResponse("Database Migration Done", "Migrate-"+sidString, "dbmigration - Migrate")
+		log.Info().Msg(logStop)
 	}
-
-	logStop := util.LogResponse("Database Migration Done", "Migrate-"+sidString, "dbmigration - Migrate")
-	log.Info().Msg(logStop)
 }
