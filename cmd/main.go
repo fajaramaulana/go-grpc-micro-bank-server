@@ -1,3 +1,5 @@
+// Package main is the entry point of the application.
+// It initializes the necessary components and starts the gRPC server.
 package main
 
 import (
@@ -7,27 +9,52 @@ import (
 
 	cfg "github.com/fajaramaulana/go-grpc-micro-bank-server/config"
 	dbmigration "github.com/fajaramaulana/go-grpc-micro-bank-server/db"
+	mydb "github.com/fajaramaulana/go-grpc-micro-bank-server/internal/adapter/database"
 	mygrpc "github.com/fajaramaulana/go-grpc-micro-bank-server/internal/adapter/grpc"
-	app "github.com/fajaramaulana/go-grpc-micro-bank-server/internal/application"
+	"github.com/fajaramaulana/go-grpc-micro-bank-server/internal/application"
+	"github.com/fajaramaulana/go-grpc-micro-bank-server/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
+
+	"github.com/chilts/sid"
 )
 
+// main is the entry point of the application.
+// It initializes the necessary components and starts the gRPC server.
 func main() {
+	sidString := sid.Id()
+	// Configure the logger to output logs to the console
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
+	// Load the configuration from the .env file
 	configuration := cfg.New("../.env")
 
+	// Create the connection string for the database
 	conn := fmt.Sprintf("%s://%s:%s@%s:%s/%s?sslmode=%s", configuration.Get("DB_DRIVER"), configuration.Get("DB_USER"), configuration.Get("DB_PASSWORD"), configuration.Get("DB_HOST"), configuration.Get("DB_PORT"), configuration.Get("DB_NAME"), configuration.Get("DB_SSLMODE"))
+
+	// Open a connection to the database
 	sqlDb, err := sql.Open("pgx", conn)
 	if err != nil {
-		log.Fatal().Msgf("Error opening database: %v", err)
+		logErr := util.LogError(err.Error(), "Main-"+sidString, "Main - sql.Open")
+		log.Fatal().Msg(logErr)
 	}
 
+	// Run database migrations
 	dbmigration.Migrate(sqlDb)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	bankService := &app.BankService{}
 
+	databaseAdapter, err := mydb.NewDatabaseAdapter(sqlDb)
+
+	if err != nil {
+		logErr := util.LogError(err.Error(), "Main-"+sidString, "Main - mydb.NewDatabaseAdapter")
+		log.Fatal().Msg(logErr)
+	}
+
+	// Create an instance of the BankService
+	bankService := application.NewBankService(databaseAdapter)
+
+	// Create a gRPC adapter with the BankService and start the server
 	grpcAdapter := mygrpc.NewGrpcAdapter(bankService, 8080)
 	grpcAdapter.Run()
 }
