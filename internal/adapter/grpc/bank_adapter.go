@@ -21,9 +21,19 @@ func (a *GrpcAdapter) GetCurrentBalance(ctx context.Context, req *bank.CurrentBa
 	if err != nil {
 		return nil, err
 	}
+	// get exchange rate
+	exchangeRate, err := a.bankService.FindExchangeRate("USD", "IDR", now)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// convert balance to IDR
+	balanceExchange := balance * exchangeRate
 
 	return &bank.CurrentBalanceResponse{
-		Amount: balance,
+		Amount:        balance,
+		AmountConvert: balanceExchange,
 		CurrentDate: &date.Date{
 			Year:  int32(now.Year()),
 			Month: int32(now.Month()),

@@ -6,15 +6,18 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"time"
 
 	cfg "github.com/fajaramaulana/go-grpc-micro-bank-server/config"
 	dbmigration "github.com/fajaramaulana/go-grpc-micro-bank-server/db"
 	mydb "github.com/fajaramaulana/go-grpc-micro-bank-server/internal/adapter/database"
 	mygrpc "github.com/fajaramaulana/go-grpc-micro-bank-server/internal/adapter/grpc"
 	"github.com/fajaramaulana/go-grpc-micro-bank-server/internal/application"
+	domainBank "github.com/fajaramaulana/go-grpc-micro-bank-server/internal/application/domain/bank"
 	"github.com/fajaramaulana/go-grpc-micro-bank-server/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/exp/rand"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 
@@ -54,7 +57,28 @@ func main() {
 	// Create an instance of the BankService
 	bankService := application.NewBankService(databaseAdapter)
 
+	go generateExchangeRates(bankService, "USD", "IDR", 5*time.Second)
 	// Create a gRPC adapter with the BankService and start the server
 	grpcAdapter := mygrpc.NewGrpcAdapter(bankService, 8080)
 	grpcAdapter.Run()
+}
+
+func generateExchangeRates(bs *application.BankService, fromCurrency, toCurrency string, duration time.Duration) {
+	ticker := time.NewTicker(duration)
+
+	for range ticker.C {
+		now := time.Now()
+		validFrom := now.Truncate(time.Second).Add(3 * time.Second)
+		validTo := validFrom.Add(duration).Add(-1 * time.Millisecond)
+
+		dummyRate := domainBank.ExchangeRate{
+			FromCurrency:       fromCurrency,
+			ToCurrency:         toCurrency,
+			ValidFromTimestamp: validFrom,
+			ValidToTimestamp:   validTo,
+			Rate:               2000 + float64(rand.Intn(300)),
+		}
+
+		bs.CreateExchangeRate(dummyRate)
+	}
 }
