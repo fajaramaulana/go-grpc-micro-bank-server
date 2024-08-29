@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/chilts/sid v0.0.0-20190607042430-660e94789ec9
-	github.com/fajaramaulana/go-grpc-micro-bank-proto v0.0.3
+	github.com/fajaramaulana/go-grpc-micro-bank-proto v0.0.6
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/golang-migrate/migrate/v4 v4.17.1
 	github.com/google/uuid v1.6.0
@@ -13,6 +13,7 @@ require (
 	github.com/rs/zerolog v1.33.0
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
 	google.golang.org/genproto v0.0.0-20240827150818-7e3bb234dfed
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240827150818-7e3bb234dfed
 	google.golang.org/grpc v1.66.0
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.11
@@ -48,6 +49,5 @@ require (
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240827150818-7e3bb234dfed // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 )

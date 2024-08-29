@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"google.golang.org/genproto/googleapis/type/datetime"
 )
 
 func ReqId(chId string) string {
@@ -57,4 +59,25 @@ func FormatRupiah(amount float64) string {
 	// Gabungkan bagian integer dan desimal dengan tanda koma
 	rupiah := "Rp " + intPart + "," + decimalPart
 	return rupiah
+}
+
+func ToTime(dt *datetime.DateTime) (time.Time, error) {
+	if dt == nil {
+		now := time.Now()
+
+		dt = &datetime.DateTime{
+			Year:    int32(now.Year()),
+			Month:   int32(now.Month()),
+			Day:     int32(now.Day()),
+			Hours:   int32(now.Hour()),
+			Minutes: int32(now.Minute()),
+			Seconds: int32(now.Second()),
+			Nanos:   int32(now.Nanosecond()),
+		}
+	}
+
+	res := time.Date(int(dt.Year), time.Month(dt.Month), int(dt.Day),
+		int(dt.Hours), int(dt.Minutes), int(dt.Seconds), int(dt.Nanos), time.UTC)
+
+	return res, nil
 }
