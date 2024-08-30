@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	cfg "github.com/fajaramaulana/go-grpc-micro-bank-server/config"
@@ -59,7 +60,13 @@ func main() {
 
 	go generateExchangeRates(bankService, "USD", "IDR", 5*time.Second)
 	// Create a gRPC adapter with the BankService and start the server
-	grpcAdapter := mygrpc.NewGrpcAdapter(bankService, 8080)
+
+	portInt, err := strconv.Atoi(configuration.Get("PORT"))
+	if err != nil {
+		logErr := util.LogError(err.Error(), "Main-"+sidString, "Main - Conv String to int Port")
+		log.Fatal().Msg(logErr)
+	}
+	grpcAdapter := mygrpc.NewGrpcAdapter(bankService, portInt)
 	grpcAdapter.Run()
 }
 
@@ -80,5 +87,6 @@ func generateExchangeRates(bs *application.BankService, fromCurrency, toCurrency
 		}
 
 		bs.CreateExchangeRate(dummyRate)
+		time.Sleep(10 * time.Second)
 	}
 }
