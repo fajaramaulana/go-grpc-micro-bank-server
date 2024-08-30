@@ -87,6 +87,5 @@ func generateExchangeRates(bs *application.BankService, fromCurrency, toCurrency
 		}
 
 		bs.CreateExchangeRate(dummyRate)
-		time.Sleep(10 * time.Second)
 	}
 }
