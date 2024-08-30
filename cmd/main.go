@@ -30,7 +30,7 @@ import (
 func main() {
 	sidString := sid.Id()
 	// Configure the logger to output logs to the console
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
 
 	// Load the configuration from the .env file
 	configuration := cfg.New("../.env")
