@@ -81,3 +81,18 @@ func ToTime(dt *datetime.DateTime) (time.Time, error) {
 
 	return res, nil
 }
+
+func CurrentDatetime() *datetime.DateTime {
+	now := time.Now()
+
+	return &datetime.DateTime{
+		Year:       int32(now.Year()),
+		Month:      int32(now.Month()),
+		Day:        int32(now.Day()),
+		Hours:      int32(now.Hour()),
+		Minutes:    int32(now.Minute()),
+		Seconds:    int32(now.Second()),
+		Nanos:      int32(now.Second()),
+		TimeOffset: &datetime.DateTime_UtcOffset{},
+	}
+}

@@ -119,3 +119,111 @@ func (s *BankService) CalculateTransactionSummary(trxSum *domainBank.Transaction
 
 	return nil
 }
+
+func (s *BankService) Transfer(trf domainBank.TransferTransaction) (uuid.UUID, bool, error) {
+	// get from account by account number from
+	accountNumberFrom := trf.FromAccountNumber
+	accountnumberTo := trf.ToAccountNumber
+	if trf.Amount < 0 {
+		logErr := util.LogError(fmt.Sprintf("Amount is less than  0 : %v\n", trf.Amount), "", "Bank Service - Transfer - Checking Amount")
+		log.Error().Msg(logErr)
+		return uuid.Nil, false, domainBank.ErrTransferRecordFailed
+	}
+	now := time.Now()
+
+	currencySet := map[string]bool{
+		"USD": true,
+		"IDR": true,
+	}
+
+	if !currencySet[trf.Currency] {
+		logErr := util.LogError("currency is not available", "", "Bank Service - Transfer - Checking Amount")
+		log.Error().Msg(logErr)
+		return uuid.Nil, false, domainBank.ErrTransferRecordFailed
+	}
+
+	amountTransfer := trf.Amount
+	if trf.Currency == "IDR" {
+		rate, err := s.db.GetExchangeRateAtTimestamp("USD", "IDR", time.Now())
+		if err != nil {
+			logErr := util.LogError(fmt.Sprintf("Can't GetExchangeRateAtTimestamp : %v\n", err), "", "Bank Service - Transfer")
+			log.Error().Msg(logErr)
+			return uuid.Nil, false, domainBank.ErrTransferRecordFailed
+		}
+		amountTransfer = trf.Amount / rate.Rate
+	}
+
+	bankAccountDetailFrom, err := s.db.GetDetailBankAccountByAccountNumber(accountNumberFrom)
+	if err != nil {
+		logErr := util.LogError(fmt.Sprintf("Can't GetDetailBankAccountByAccountNumber From : %v\n", err), "", "Bank Service - Transfer")
+		log.Error().Msg(logErr)
+		return uuid.Nil, false, domainBank.ErrTransferSourceAccountNotFound
+	}
+
+	if bankAccountDetailFrom.CurrentBalance < amountTransfer {
+		return uuid.Nil, false, domainBank.ErrTransferTransactionPair
+	}
+
+	bankAccountDetailTo, err := s.db.GetDetailBankAccountByAccountNumber(accountnumberTo)
+	if err != nil {
+		logErr := util.LogError(fmt.Sprintf("Can't GetDetailBankAccountByAccountNumber To : %v\n", err), "", "Bank Service - Transfer")
+		log.Error().Msg(logErr)
+		return uuid.Nil, false, domainBank.ErrTransferDestinationAccountNotFound
+	}
+
+	transferDetail := domainBank.BankTransferOrm{
+		TransferUuid:      uuid.New(),
+		FromAccountUuid:   bankAccountDetailFrom.AccountUuid,
+		ToAccountUuid:     bankAccountDetailTo.AccountUuid,
+		Currency:          trf.Currency,
+		Amount:            amountTransfer,
+		TransferTimestamp: now,
+		TransferSuccess:   false,
+		CreatedAt:         now,
+		UpdatedAt:         now,
+	}
+
+	uuidTrans, err := s.db.CreateTransfer(transferDetail)
+	if err != nil {
+		logErr := util.LogError(fmt.Sprintf("Can't CreateTransfer : %v\n", err), "", "Bank Service - Transfer")
+		log.Error().Msg(logErr)
+		return uuid.Nil, false, domainBank.ErrTransferRecordFailed
+	}
+
+	bankTransactionOrmFrom := domainBank.BankTransactionOrm{
+		TransactionUuid:      uuid.New(),
+		AccountUuid:          bankAccountDetailFrom.AccountUuid,
+		TransactionTimestamp: now,
+		Amount:               amountTransfer,
+		TransactionType:      "1",
+		Notes:                trf.Notes,
+		CreatedAt:            now,
+		UpdatedAt:            now,
+	}
+
+	bankTransactionOrmTo := domainBank.BankTransactionOrm{
+		TransactionUuid:      uuid.New(),
+		AccountUuid:          bankAccountDetailFrom.AccountUuid,
+		TransactionTimestamp: now,
+		Amount:               amountTransfer,
+		TransactionType:      "2",
+		Notes:                trf.Notes,
+		CreatedAt:            now,
+		UpdatedAt:            now,
+	}
+
+	status, err := s.db.CreateTransferTransactionPair(bankAccountDetailFrom, bankAccountDetailTo, bankTransactionOrmFrom, bankTransactionOrmTo)
+	if err != nil {
+		logErr := util.LogError(fmt.Sprintf("Can't CreateTransferTransactionPair : %v\n", err), "", "Bank Service - Transfer")
+		log.Error().Msg(logErr)
+		return uuid.Nil, false, domainBank.ErrTransferTransactionPair
+	}
+
+	err = s.db.UpdateTransferStatus(transferDetail, status)
+	if err != nil {
+		return uuid.Nil, false, domainBank.ErrTransferRecordFailed
+	}
+
+	return uuidTrans, true, nil
+
+}

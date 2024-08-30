@@ -94,3 +94,69 @@ func (a *DatabaseAdapter) CreateTransaction(account domainBank.BankAccountOrm, t
 
 	return trx.TransactionUuid, nil
 }
+
+func (a *DatabaseAdapter) CreateTransfer(trf domainBank.BankTransferOrm) (uuid.UUID, error) {
+	if err := a.db.Create(trf).Error; err != nil {
+		return uuid.Nil, err
+	}
+
+	return trf.TransferUuid, nil
+}
+
+func (a *DatabaseAdapter) CreateTransferTransactionPair(fromAccountOrm domainBank.BankAccountOrm, toAccountOrm domainBank.BankAccountOrm,
+	fromTransactionOrm domainBank.BankTransactionOrm, toTransactionOrm domainBank.BankTransactionOrm) (bool, error) {
+	tx := a.db.Begin()
+
+	// from account
+	if err := tx.Create(fromTransactionOrm).Error; err != nil {
+		return false, err
+	}
+
+	// to account
+	if err := tx.Create(toTransactionOrm).Error; err != nil {
+		return false, err
+	}
+
+	// recalculate balance from account
+	newBalanceFrom := fromAccountOrm.CurrentBalance - fromTransactionOrm.Amount
+
+	// recalculate balance to account
+	newBalanceTo := toAccountOrm.CurrentBalance + toTransactionOrm.Amount
+
+	if err := tx.Model(&fromAccountOrm).Updates(
+		map[string]interface{}{
+			"current_balance": newBalanceFrom,
+			"updated_at":      time.Now(),
+		},
+	).Error; err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	if err := tx.Model(&toAccountOrm).Updates(
+		map[string]interface{}{
+			"current_balance": newBalanceTo,
+			"updated_at":      time.Now(),
+		},
+	).Error; err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	tx.Commit()
+
+	return true, nil
+}
+
+func (a *DatabaseAdapter) UpdateTransferStatus(transfer domainBank.BankTransferOrm, status bool) error {
+	if err := a.db.Model(&transfer).Updates(
+		map[string]interface{}{
+			"transfer_success": status,
+			"updated_at":       time.Now(),
+		},
+	).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
