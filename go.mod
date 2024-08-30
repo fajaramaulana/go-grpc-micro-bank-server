@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/chilts/sid v0.0.0-20190607042430-660e94789ec9
-	github.com/fajaramaulana/go-grpc-micro-bank-proto v0.0.8
+	github.com/fajaramaulana/go-grpc-micro-bank-proto v0.0.9
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/golang-migrate/migrate/v4 v4.17.1
 	github.com/google/uuid v1.6.0
