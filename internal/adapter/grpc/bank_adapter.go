@@ -31,13 +31,20 @@ func (a *GrpcAdapter) GetCurrentBalance(ctx context.Context, req *bank.CurrentBa
 
 	balance, err := a.bankService.GetCurrentBalance(req.GetAccountNumber())
 	if err != nil {
-		return nil, err
+		log.Error().Msg(fmt.Sprintf("account %v not found", req.AccountNumber))
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"account %v not found", req.AccountNumber,
+		)
 	}
 	// get exchange rate
 	exchangeRate, err := a.bankService.FindExchangeRate("USD", "IDR", now)
-
 	if err != nil {
-		return nil, err
+		log.Error().Msg(fmt.Sprintf("Exchange rate from %v to %v on %v not found", "USD", "IDR", now.Format(time.RFC3339)))
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"Exchange rate from %v to %v on %v not found", "USD", "IDR", now.Format(time.RFC3339),
+		)
 	}
 
 	// convert balance to IDR
@@ -61,7 +68,6 @@ func (a *GrpcAdapter) FetchExchangeRates(req *bank.ExchangeRateRequest, stream g
 		select {
 		case <-context.Done():
 			log.Info().Msg("Client Cancelled stream")
-			// log.Println("Client cancelled stream")
 			return nil
 		default:
 			now := time.Now().Truncate(time.Second)
