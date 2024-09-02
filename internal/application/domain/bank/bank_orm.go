@@ -1,4 +1,4 @@
-package orm
+package domain
 
 import (
 	"time"

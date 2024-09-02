@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/fajaramaulana/go-grpc-micro-bank-proto/protogen/go/bank"
+	"github.com/fajaramaulana/go-grpc-micro-bank-server/internal/logger"
 	"github.com/fajaramaulana/go-grpc-micro-bank-server/internal/port"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -36,11 +37,12 @@ func (a *GrpcAdapter) Run() {
 
 	log.Info().Msgf("Server listening on port %d", a.grpcPort)
 
-	grpcServer := grpc.NewServer()
+	grpcLogger := grpc.UnaryInterceptor(logger.GrpcLogger)
+	grpcServer := grpc.NewServer(grpcLogger)
+	reflection.Register(grpcServer)
 	a.server = grpcServer
 
 	bank.RegisterBankServiceServer(grpcServer, a)
-	reflection.Register(grpcServer)
 
 	if err := grpcServer.Serve(listen); err != nil {
 		log.Fatal().Err(err).Msgf("Failed to serve gRPC server over port %d", a.grpcPort)
