@@ -87,5 +87,15 @@ func generateExchangeRates(bs *application.BankService, fromCurrency, toCurrency
 		}
 
 		bs.CreateExchangeRate(dummyRate)
+
+		dummyRateReverse := domainBank.ExchangeRate{
+			FromCurrency:       toCurrency,
+			ToCurrency:         fromCurrency,
+			ValidFromTimestamp: validFrom,
+			ValidToTimestamp:   validTo,
+			Rate:               1 / dummyRate.Rate,
+		}
+
+		bs.CreateExchangeRate(dummyRateReverse)
 	}
 }

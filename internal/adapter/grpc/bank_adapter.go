@@ -255,7 +255,7 @@ func (a *GrpcAdapter) TransferMultiple(stream grpc.BidiStreamingServer[bank.Tran
 
 			_, transferSuccess, err := a.bankService.Transfer(transferTrx)
 			if err != nil {
-				return buildTransferErrorStatusGrpc(err, *req)
+				return buildTransferErrorStatusGrpc(err, req)
 			}
 
 			res := bank.TransferResponse{
@@ -281,7 +281,7 @@ func (a *GrpcAdapter) TransferMultiple(stream grpc.BidiStreamingServer[bank.Tran
 	}
 }
 
-func buildTransferErrorStatusGrpc(err error, req bank.TransferRequest) error {
+func buildTransferErrorStatusGrpc(err error, req *bank.TransferRequest) error {
 	switch {
 	case errors.Is(err, domainBank.ErrTransferSourceAccountNotFound):
 		s := status.New(codes.FailedPrecondition, err.Error())
