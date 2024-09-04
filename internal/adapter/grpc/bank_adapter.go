@@ -227,22 +227,23 @@ func (a *GrpcAdapter) SummarizeTransactions(stream grpc.ClientStreamingServer[ba
 }
 
 func (a *GrpcAdapter) TransferMultiple(stream grpc.BidiStreamingServer[bank.TransferRequest, bank.TransferResponse]) error {
-	context := stream.Context()
+	ctx := stream.Context()
 
 	for {
 		select {
-		case <-context.Done():
+		case <-ctx.Done():
 			log.Info().Msg("Client cancelled stream")
-			return nil
+			return nil // Context was cancelled, exit gracefully
 		default:
 			req, err := stream.Recv()
-
 			if err == io.EOF {
-				return nil
+				log.Info().Msg("Client has closed sending, finishing stream.")
+				return nil // Normal stream closure
 			}
 
 			if err != nil {
-				log.Fatal().Msg(fmt.Sprintf("Error while reading from client : %s", err.Error()))
+				log.Error().Msg(fmt.Sprintf("Error while reading from client: %s", err.Error()))
+				return err // Return the error to the client
 			}
 
 			transferTrx := domainBank.TransferTransaction{
@@ -255,10 +256,10 @@ func (a *GrpcAdapter) TransferMultiple(stream grpc.BidiStreamingServer[bank.Tran
 
 			_, transferSuccess, err := a.bankService.Transfer(transferTrx)
 			if err != nil {
-				return buildTransferErrorStatusGrpc(err, req)
+				return buildTransferErrorStatusGrpc(err, req) // Handle and send detailed gRPC error status
 			}
 
-			res := bank.TransferResponse{
+			res := &bank.TransferResponse{
 				AccountNumberSender:   req.AccountNumberSender,
 				AccountNumberReciever: req.AccountNumberReciever,
 				Currency:              req.Currency,
@@ -272,10 +273,10 @@ func (a *GrpcAdapter) TransferMultiple(stream grpc.BidiStreamingServer[bank.Tran
 				res.Status = bank.TransferStatus_TRANSFER_STATUS_FAILED
 			}
 
-			err = stream.Send(&res)
-
-			if err != nil {
-				log.Fatal().Msg(fmt.Sprintf("Error while sending response to client : %s", err.Error()))
+			// Send response to the client
+			if err := stream.Send(res); err != nil {
+				log.Error().Msg(fmt.Sprintf("Error while sending response to client: %s", err.Error()))
+				return err // Return the send error to the client
 			}
 		}
 	}
