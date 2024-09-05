@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/fajaramaulana/go-grpc-micro-bank-proto/protogen/go/bank"
+	"github.com/fajaramaulana/go-grpc-micro-bank-proto/protogen/go/resilliency"
 	"github.com/fajaramaulana/go-grpc-micro-bank-server/internal/logger"
 	"github.com/fajaramaulana/go-grpc-micro-bank-server/internal/port"
 	"github.com/rs/zerolog/log"
@@ -13,16 +14,19 @@ import (
 )
 
 type GrpcAdapter struct {
-	bankService port.BankServicePort
-	grpcPort    int
-	server      *grpc.Server
+	bankService        port.BankServicePort
+	resilliencyService port.ResilliencyServicePort
+	grpcPort           int
+	server             *grpc.Server
 	bank.BankServiceServer
+	resilliency.ResilliencyServiceServer
 }
 
-func NewGrpcAdapter(bankService port.BankServicePort, grpcPort int) *GrpcAdapter {
+func NewGrpcAdapter(bankService port.BankServicePort, resilliencyService port.ResilliencyServicePort, grpcPort int) *GrpcAdapter {
 	return &GrpcAdapter{
-		bankService: bankService,
-		grpcPort:    grpcPort,
+		bankService:        bankService,
+		grpcPort:           grpcPort,
+		resilliencyService: resilliencyService,
 	}
 }
 
@@ -43,6 +47,7 @@ func (a *GrpcAdapter) Run() {
 	a.server = grpcServer
 
 	bank.RegisterBankServiceServer(grpcServer, a)
+	resilliency.RegisterResilliencyServiceServer(grpcServer, a)
 
 	if err := grpcServer.Serve(listen); err != nil {
 		log.Fatal().Err(err).Msgf("Failed to serve gRPC server over port %d", a.grpcPort)

@@ -15,3 +15,7 @@ type BankServicePort interface {
 	CalculateTransactionSummary(trxSum *domainBank.TransactionSummary, trx domainBank.Transaction) error
 	Transfer(trf domainBank.TransferTransaction) (uuid.UUID, bool, error)
 }
+
+type ResilliencyServicePort interface {
+	GenerateResilliency(minDelaySec int32, maxDelaySec int32, statusCodes []uint32) (string, uint32)
+}

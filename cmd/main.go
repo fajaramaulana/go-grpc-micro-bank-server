@@ -58,6 +58,9 @@ func main() {
 	// Create an instance of the BankService
 	bankService := application.NewBankService(databaseAdapter)
 
+	// Create an instance of the BankService
+	resilliencyService := application.NewResilliencyService()
+
 	go generateExchangeRates(bankService, "USD", "IDR", 5*time.Second)
 	// Create a gRPC adapter with the BankService and start the server
 
@@ -66,7 +69,7 @@ func main() {
 		logErr := util.LogError(err.Error(), "Main-"+sidString, "Main - Conv String to int Port")
 		log.Fatal().Msg(logErr)
 	}
-	grpcAdapter := mygrpc.NewGrpcAdapter(bankService, portInt)
+	grpcAdapter := mygrpc.NewGrpcAdapter(bankService, resilliencyService, portInt)
 	grpcAdapter.Run()
 }
 
