@@ -73,6 +73,7 @@ func (a *GrpcAdapter) ClientStreamingResilliency(stream grpc.ClientStreamingServ
 		req, err := stream.Recv()
 
 		if err == io.EOF {
+			log.Info().Msg("ClientStreamingResilliency - Client closed the connection")
 			res := resilliency.ResilliencyResponse{
 				DummyString: fmt.Sprintf("Received %v requests from client", strconv.Itoa(i)),
 			}
